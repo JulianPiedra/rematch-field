@@ -1,329 +1,319 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import DraggablePlayer from "./draggable-player"
-import DraggableBall from "./draggable-ball"
-
-type GameMode = "3v3" | "4v4" | "5v5"
-
-interface Player {
-  id: string
-  team: "team1" | "team2"
-  x: number
-  y: number
-  number: number
-}
-
-interface Ball {
-  x: number
-  y: number
-}
-const initialTeam1: Player[] = [
-  { id: "w1", team: "team1", number: 1, x: 40, y: 50 },
-  { id: "w2", team: "team1", number: 2, x: 30, y: 20 },
-  { id: "w3", team: "team1", number: 3, x: 30, y: 80 },
-  { id: "w4", team: "team1", number: 4, x: 25, y: 50 },
-  { id: "w5", team: "team1", number: 5, x: 3, y: 50 },
-]
-
-const initialTeam2: Player[] = [
-  { id: "b1", team: "team2", number: 1, x: 60, y: 50 },
-  { id: "b2", team: "team2", number: 2, x: 70, y: 20 },
-  { id: "b3", team: "team2", number: 3, x: 70, y: 80 },
-  { id: "b4", team: "team2", number: 4, x: 75, y: 50 },
-  { id: "b5", team: "team2", number: 5, x: 97, y: 50 },
-]
-const initialPositions = {
-  "3v3": {
-    team1: [
-      { id: "w1", number: 1, x: 30, y: 50 },
-      { id: "w2", number: 2, x: 20, y: 30 },
-      { id: "w3", number: 3, x: 20, y: 70 },
-    ],
-    team2: [
-      { id: "b1", number: 1, x: 70, y: 50 },
-      { id: "b2", number: 2, x: 80, y: 30 },
-      { id: "b3", number: 3, x: 80, y: 70 },
-    ],
-  },
-
-  "4v4": {
-    team1: [
-      { id: "w1", number: 1, x: 28, y: 50 },
-      { id: "w2", number: 2, x: 18, y: 30 },
-      { id: "w3", number: 3, x: 18, y: 70 },
-      { id: "w4", number: 4, x: 10, y: 50 },
-    ],
-    team2: [
-      { id: "b1", number: 1, x: 72, y: 50 },
-      { id: "b2", number: 2, x: 82, y: 30 },
-      { id: "b3", number: 3, x: 82, y: 70 },
-      { id: "b4", number: 4, x: 90, y: 50 },
-    ],
-  },
-
-  "5v5": {
-    team1: initialTeam1,
-    team2: initialTeam2,
-  },
-}
-
-const modes = {
-  "3v3": {
-    team1: initialTeam1.slice(0, 3),
-    team2: initialTeam2.slice(0, 3),
-  },
-  "4v4": {
-    team1: initialTeam1.slice(0, 4),
-    team2: initialTeam2.slice(0, 4),
-  },
-  "5v5": {
-    team1: initialTeam1,
-    team2: initialTeam2,
-  },
-}
-
+import type React from "react"
+import { useEffect, useRef, useState } from "react"
+import { ControlPanel } from "./control-panel"
+import { DrawingControls } from "./drawing-controls"
+import { InfoBar } from "./info-bar"
+import { PlaybackControls } from "./playback-controls"
+import { SavedPlays } from "./saved-plays"
+import { TacticalField } from "./tactical-field"
+import { StorageService } from "./storage"
+import {
+  Ball,
+  DrawingLine,
+  DrawingPoint,
+  GameMode,
+  PlayFrame,
+  Player,
+  SavedPlay,
+  initialPositions,
+  initialTeam1,
+  initialTeam2,
+} from "./types"
 
 export default function TacticalBoard() {
   const [gameMode, setGameMode] = useState<GameMode>("5v5")
-  const [ball, setBall] = useState<Ball>({ x: 51.5, y: 50 })
+  const [ball, setBall] = useState<Ball>({ x: 50, y: 50 })
+  const [players, setPlayers] = useState<Player[]>([...initialTeam1, ...initialTeam2])
   const boardRef = useRef<HTMLDivElement>(null)
 
-    const [players, setPlayers] = useState<Player[]>([
-    ...initialTeam1,
-    ...initialTeam2,
-  ])
-useEffect(() => {
-  const current = initialPositions[gameMode]
+  const [drawMode, setDrawMode] = useState(false)
+  const [isDrawing, setIsDrawing] = useState(false)
+  const [currentLine, setCurrentLine] = useState<DrawingPoint[]>([])
+  const [drawings, setDrawings] = useState<DrawingLine[]>([])
+  const [drawingColor, setDrawingColor] = useState("#FFD700")
+  const [drawingWidth, setDrawingWidth] = useState(3)
+  const [isArrowMode, setIsArrowMode] = useState(true)
 
-  const newPlayers = [
-    ...current.team1.map(p => ({ ...p, team: "team1" as const })),
-    ...current.team2.map(p => ({ ...p, team: "team2" as const })),
-  ]
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordedFrames, setRecordedFrames] = useState<PlayFrame[]>([])
+  const [savedPlays, setSavedPlays] = useState<SavedPlay[]>([])
 
-  setPlayers(newPlayers)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentFrame, setCurrentFrame] = useState(0)
+  const [playbackSpeed, setPlaybackSpeed] = useState(1)
+  const [selectedPlay, setSelectedPlay] = useState<SavedPlay | null>(null)
 
-  // Si querés mover la pelota al centro también:
-  setBall({ x: 51.5, y: 50 })
-}, [gameMode])
+  useEffect(() => {
+    const plays = StorageService.loadPlays()
+    setSavedPlays(plays)
+  }, [])
 
+  useEffect(() => {
+    StorageService.savePlays(savedPlays)
+  }, [savedPlays])
+
+  useEffect(() => {
+    const current = initialPositions[gameMode]
+    const newPlayers = [
+      ...current.team1.map((p) => ({ ...p, team: "team1" as const })),
+      ...current.team2.map((p) => ({ ...p, team: "team2" as const })),
+    ]
+    setPlayers(newPlayers)
+    setBall({ x: 50, y: 50 })
+  }, [gameMode])
 
   const handlePlayerMove = (playerId: string, x: number, y: number) => {
-    setPlayers(
-      players.map((p) =>
+    setPlayers((prev) =>
+      prev.map((p) =>
         p.id === playerId ? { ...p, x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) } : p,
       ),
     )
   }
-  
 
   const handleBallMove = (x: number, y: number) => {
-    setBall({
-      x: Math.max(0, Math.min(100, x)),
-      y: Math.max(0, Math.min(100, y)),
-    })
+    setBall({ x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) })
   }
 
   const resetPositions = () => {
-
-     setPlayers([
-      ...initialTeam1,
-      ...initialTeam2,
-    ])
+    const current = initialPositions[gameMode]
+    const newPlayers = [
+      ...current.team1.map((p) => ({ ...p, team: "team1" as const })),
+      ...current.team2.map((p) => ({ ...p, team: "team2" as const })),
+    ]
+    setPlayers(newPlayers)
+    setBall({ x: 50, y: 50 })
+    setDrawings([])
   }
 
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!drawMode || !boardRef.current) return
+
+    const rect = boardRef.current.getBoundingClientRect()
+    const x = ((e.clientX - rect.left) / rect.width) * 100
+    const y = ((e.clientY - rect.top) / rect.height) * 100
+
+    setIsDrawing(true)
+    setCurrentLine([{ x, y }])
+  }
+
+  const continueDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing || !drawMode || !boardRef.current) return
+
+    const rect = boardRef.current.getBoundingClientRect()
+    const x = ((e.clientX - rect.left) / rect.width) * 100
+    const y = ((e.clientY - rect.top) / rect.height) * 100
+
+    setCurrentLine((prev) => [...prev, { x, y }])
+  }
+
+  const endDrawing = () => {
+    if (!isDrawing || currentLine.length < 2) {
+      setIsDrawing(false)
+      setCurrentLine([])
+      return
+    }
+
+    const newDrawing: DrawingLine = {
+      id: Date.now().toString(),
+      points: currentLine,
+      color: drawingColor,
+      width: drawingWidth,
+      isArrow: isArrowMode,
+    }
+
+    setDrawings((prev) => [...prev, newDrawing])
+    setIsDrawing(false)
+    setCurrentLine([])
+  }
+
+  const clearDrawings = () => setDrawings([])
+
+  const undoLastDrawing = () => setDrawings((prev) => prev.slice(0, -1))
+
+  const captureSnapshot = () => {
+    const frame: PlayFrame = {
+      players: JSON.parse(JSON.stringify(players)),
+      ball: { ...ball },
+      timestamp: Date.now(),
+      drawings: JSON.parse(JSON.stringify(drawings)),
+    }
+    setRecordedFrames((prev) => [...prev, frame])
+  }
+
+  const startRecording = () => {
+    setRecordedFrames([])
+    setIsRecording(true)
+    const frame: PlayFrame = {
+      players: JSON.parse(JSON.stringify(players)),
+      ball: { ...ball },
+      timestamp: Date.now(),
+      drawings: JSON.parse(JSON.stringify(drawings)),
+    }
+    setRecordedFrames([frame])
+  }
+  const stopRecording = () => {
+    setIsRecording(false)
+  }
+
+  const deleteLastSnapshot = () => {
+    if (recordedFrames.length > 1) {
+      setRecordedFrames((prev) => prev.slice(0, -1))
+    }
+  }
+
+  const savePlay = () => {
+    if (recordedFrames.length < 2) {
+      alert("You need at least 2 snapshots to save a play!")
+      return
+    }
+
+    const playName = prompt("Enter play name:")
+    if (!playName) return
+
+    const newPlay: SavedPlay = {
+      id: Date.now().toString(),
+      name: playName,
+      frames: recordedFrames,
+      gameMode,
+    }
+
+    setSavedPlays((prev) => [...prev, newPlay])
+    setRecordedFrames([])
+    setIsRecording(false)
+    alert("Play saved successfully!")
+  }
+
+  const loadPlay = (play: SavedPlay) => {
+    setSelectedPlay(play)
+    setCurrentFrame(0)
+    setIsPlaying(false)
+    setGameMode(play.gameMode)
+
+    if (play.frames.length > 0) {
+      setPlayers(play.frames[0].players)
+      setBall(play.frames[0].ball)
+      setDrawings(play.frames[0].drawings)
+    }
+  }
+
+  const playRecording = () => {
+    if (!selectedPlay || selectedPlay.frames.length === 0) return
+    setIsPlaying(true)
+    setCurrentFrame(0)
+  }
+
+  const pausePlayback = () => setIsPlaying(false)
+
+  const stopPlayback = () => {
+    setIsPlaying(false)
+    setCurrentFrame(0)
+    if (selectedPlay && selectedPlay.frames.length > 0) {
+      setPlayers(selectedPlay.frames[0].players)
+      setBall(selectedPlay.frames[0].ball)
+      setDrawings(selectedPlay.frames[0].drawings)
+    }
+  }
+
+  const deletePlay = (playId: string) => {
+    if (confirm("Are you sure you want to delete this play?")) {
+      setSavedPlays((prev) => prev.filter((p) => p.id !== playId))
+      if (selectedPlay?.id === playId) {
+        setSelectedPlay(null)
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (isPlaying && selectedPlay && selectedPlay.frames.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentFrame((prev) => {
+          const next = prev + 1
+
+          if (next >= selectedPlay.frames.length) {
+            setIsPlaying(false)
+            return prev
+          }
+
+          const frame = selectedPlay.frames[next]
+          setPlayers(frame.players)
+          setBall(frame.ball)
+          setDrawings(frame.drawings)
+
+          return next
+        })
+      }, 1000 / playbackSpeed)
+
+      return () => clearInterval(interval)
+    }
+  }, [isPlaying, selectedPlay, playbackSpeed])
+
   return (
-    <div className="space-y-4">
-      <div className="flex gap-3 flex-wrap">
-        <Button
-          onClick={() => setGameMode("3v3")}
-          variant={gameMode === "3v3" ? "default" : "outline"}
-          className="bg-green-600 hover:bg-green-700 text-white border-green-500"
-        >
-          3v3
-        </Button>
-        <Button
-          onClick={() => setGameMode("4v4")}
-          variant={gameMode === "4v4" ? "default" : "outline"}
-          className="bg-green-600 hover:bg-green-700 text-white border-green-500"
-        >
-          4v4
-        </Button>
-        <Button
-          onClick={() => setGameMode("5v5")}
-          variant={gameMode === "5v5" ? "default" : "outline"}
-          className="bg-green-600 hover:bg-green-700 text-white border-green-500"
-        >
-          5v5
-        </Button>
-        <Button
-          onClick={resetPositions}
-          variant="outline"
-          className="ml-auto border-gray-600 text-gray-300 hover:bg-gray-700 bg-transparent"
-        >
-          Reset
-        </Button>
-      </div>
+    <div className="space-y-4 p-6 bg-gray-900 min-h-screen">
+      <ControlPanel
+        gameMode=        {gameMode}
+        onChangeGameMode={setGameMode}
+        onReset={resetPositions}
+        isRecording={isRecording}
+        isPlaying={isPlaying}
+        onStartRecording={startRecording}
+        onCapture={captureSnapshot}
+        onDeleteLast={deleteLastSnapshot}
+        onStopRecording={stopRecording}
+        canDeleteLast={recordedFrames.length > 1}
+        onSave={savePlay}
+        canSave={recordedFrames.length >= 2}
+        snapshotsCount={recordedFrames.length}
+      />
 
-      <div
-        ref={boardRef}
-        className="relative w-full bg-gradient-to-b from-green-600 to-green-700 rounded-lg overflow-hidden shadow-2xl"
-        style={{ aspectRatio: "2 / 1" }}
-      >
-        {/* Field Lines */}
-        <svg
-          className="absolute inset-0 w-full h-full pointer-events-none"
-          preserveAspectRatio="none"
-          viewBox="0 0 100 50"
-        >
-          <defs>
-            <pattern id="field-lines" x="0" y="0" width="100%" height="100%" patternUnits="objectBoundingBox">
-              {/* Franjas verticales de colores alternados - 34 franjas */}
-              {Array.from({ length: 34 }).map((_, i) => {
-                const x = (i / 34) * 100
-                const width = (1 / 34) * 100
-                const isEven = i % 2 === 0
-                return (
-                  <rect
-                    key={`stripe-${i}`}
-                    x={`${x}%`}
-                    y="0"
-                    width={`${width}%`}
-                    height="100%"
-                    fill={isEven ? "rgba(0,100,0,0.15)" : "rgba(0,150,0,0.15)"}
-                  />
-                )
-              })}
+      <DrawingControls
+        drawMode={drawMode}
+        onToggleDrawMode={() => setDrawMode((prev) => !prev)}
+        isArrowMode={isArrowMode}
+        onToggleArrowMode={() => setIsArrowMode((prev) => !prev)}
+        drawingColor={drawingColor}
+        onChangeColor={setDrawingColor}
+        drawingWidth={drawingWidth}
+        onChangeWidth={setDrawingWidth}
+        onUndo={undoLastDrawing}
+        onClear={clearDrawings}
+      />
 
-              {/* Center line */}
-              <line x1="51.5%" y1="0" x2="51.5%" y2="100%" stroke="rgba(255,255,255,0.4)" strokeWidth="0.3%" />
+      <TacticalField
+        boardRef={boardRef}
+        players={players}
+        ball={ball}
+        drawings={drawings}
+        currentLine={currentLine}
+        drawingColor={drawingColor}
+        drawingWidth={drawingWidth}
+        isArrowMode={isArrowMode}
+        drawMode={drawMode}
+        onPlayerMove={handlePlayerMove}
+        onBallMove={handleBallMove}
+        onStartDrawing={startDrawing}
+        onContinueDrawing={continueDrawing}
+        onEndDrawing={endDrawing}
+      />
 
-              {/* Center circle */}
-              <circle cx="51.5%" cy="50%" r="8%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" />
+      <InfoBar players={players} ball={ball} />
 
-              {/* Center spot */}
-              <circle cx="51.5%" cy="50%" r="0.8%" fill="rgba(255,255,255,0.6)" />
+      {selectedPlay && (
+        <PlaybackControls
+          play={selectedPlay}
+          isPlaying={isPlaying}
+          currentFrame={currentFrame}
+          playbackSpeed={playbackSpeed}
+          onClose={() => setSelectedPlay(null)}
+          onPlay={playRecording}
+          onPause={pausePlayback}
+          onStop={stopPlayback}
+          onChangeSpeed={setPlaybackSpeed}
+        />
+      )}
 
-              {/* GOAL AREAS - LEFT SIDE */}
-              {/* Área grande (penal) - left */}
-              <rect
-                x="-1"
-                y="15%"
-                width="20%"
-                height="70%"
-                fill="none"
-                stroke="rgba(255,255,255,0.3)"
-                strokeWidth="0.2%"
-              />
-
-              {/* Área chica - left */}
-              <rect
-                x="-1%"
-                y="30%"
-                width="8%"
-                height="40%"
-                fill="none"
-                stroke="rgba(255,255,255,0.3)"
-                strokeWidth="0.2%"
-              />
-
-              {/* Media luna del punto penal - left (semicírculo fuera del área) */}
-              <svg width="100%" height="100%">
-                <clipPath id="cut">
-                  <rect x="19%" y="0" width="50%" height="100%" />
-                </clipPath>
-
-                <circle
-                  cx="15%"
-                  cy="50%"
-                  r="8%"
-                  fill="none"
-                  stroke="rgba(255,255,255,0.3)"
-                  strokeWidth="0.2%"
-                  clipPath="url(#cut)"
-                />
-              </svg>
-
-              {/* Punto penal - left */}
-              <circle cx="12.2" cy="25" r="0.5%" fill="rgba(255,255,255,0.6)" />
-
-              {/* GOAL AREAS - RIGHT SIDE */}
-              {/* Área grande (penal) - right */}
-              <rect
-                x="81%"
-                y="15%"
-                width="20%"
-                height="70%"
-                fill="none"
-                stroke="rgba(255,255,255,0.3)"
-                strokeWidth="0.2%"
-              />
-
-              {/* Área chica - right */}
-              <rect
-                x="93%"
-                y="30%"
-                width="8%"
-                height="40%"
-                fill="none"
-                stroke="rgba(255,255,255,0.3)"
-                strokeWidth="0.2%"
-              />
-
-              {/* Media luna del punto penal - right (semicírculo fuera del área) */}
-              <svg width="100%" height="100%">
-                <clipPath id="rightArc">
-                  <rect x="61%" y="0" width="20%" height="100%" />
-                </clipPath>
-
-                <circle
-                  cx="85%"
-                  cy="50%"
-                  r="8%"
-                  fill="none"
-                  stroke="rgba(255,255,255,0.3)"
-                  strokeWidth="0.2%"
-                  clipPath="url(#rightArc)"
-                />
-              </svg>
-
-
-
-
-              {/* Punto penal - right */}
-              <circle cx="87.8" cy="25" r="0.5%" fill="rgba(255,255,255,0.6)" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#field-lines)" />
-        </svg>
-
-        {/* Players */}
-        {players.map((player) => (
-          <DraggablePlayer key={player.id} player={player} onMove={handlePlayerMove} boardRef={boardRef as React.RefObject<HTMLDivElement>} />
-        ))}
-
-        {/* Ball */}
-        <DraggableBall ball={ball} onMove={handleBallMove} boardRef={boardRef as React.RefObject<HTMLDivElement>} />
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 text-center text-sm text-gray-400">
-        <div>
-          <p className="font-semibold text-white">Black team</p>
-          <p>{players.filter((p) => p.team === "team1").length} players</p>
-        </div>
-        <div>
-          <p className="font-semibold text-white">Ball</p>
-          <p>
-            {Math.round(ball.x)}%, {Math.round(ball.y)}%
-          </p>
-        </div>
-        <div>
-          <p className="font-semibold text-white">White team </p>
-          <p>{players.filter((p) => p.team === "team2").length} players</p>
-        </div>
-      </div>
+      <SavedPlays savedPlays={savedPlays} onLoad={loadPlay} onDelete={deletePlay} />
     </div>
   )
 }

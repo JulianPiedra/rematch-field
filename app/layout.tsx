@@ -7,9 +7,9 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
+  title: 'Rematch Tactical Board',
+  description: 'A draggable tactical board for Rematch.',
+  generator: 'Next.js',
   icons: {
     icon: [
       {

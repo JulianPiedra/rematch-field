@@ -1,61 +1,36 @@
 "use client"
 
-import type React from "react"
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type RefObject } from "react"
+import { Player } from "./types"
 
-import { useState, useRef, useEffect } from "react"
-
-interface Player {
-  id: string
-  team: "team1" | "team2"
-  x: number
-  y: number
-  number: number
-}
-
-interface Props {
+interface DraggablePlayerProps {
   player: Player
   onMove: (id: string, x: number, y: number) => void
-  boardRef: React.RefObject<HTMLDivElement>
+  boardRef: RefObject<HTMLDivElement>
+  disabled?: boolean
 }
 
-
-export default function DraggablePlayer({ player, onMove, boardRef }: Props) {
+export function DraggablePlayer({ player, onMove, boardRef, disabled }: DraggablePlayerProps) {
   const [isDragging, setIsDragging] = useState(false)
   const elementRef = useRef<HTMLDivElement>(null)
-  const rafRef = useRef<number | null>(null)
-  
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = (e: ReactMouseEvent) => {
+    if (disabled) return
     e.preventDefault()
     setIsDragging(true)
   }
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging || !boardRef.current) return
+      if (!isDragging || !boardRef.current || disabled) return
 
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current)
-      }
-
-      rafRef.current = requestAnimationFrame(() => {
-        if (!boardRef.current) return
-        
-        const boardRect = boardRef.current.getBoundingClientRect()
-        const x = ((e.clientX - boardRect.left) / boardRect.width) * 100
-        const y = ((e.clientY - boardRect.top) / boardRect.height) * 100
-
-        onMove(player.id, x, y)
-      })
+      const boardRect = boardRef.current.getBoundingClientRect()
+      const x = ((e.clientX - boardRect.left) / boardRect.width) * 100
+      const y = ((e.clientY - boardRect.top) / boardRect.height) * 100
+      onMove(player.id, x, y)
     }
 
-    const handleMouseUp = () => {
-      setIsDragging(false)
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current)
-        rafRef.current = null
-      }
-    }
+    const handleMouseUp = () => setIsDragging(false)
 
     if (isDragging) {
       document.addEventListener("mousemove", handleMouseMove)
@@ -63,12 +38,9 @@ export default function DraggablePlayer({ player, onMove, boardRef }: Props) {
       return () => {
         document.removeEventListener("mousemove", handleMouseMove)
         document.removeEventListener("mouseup", handleMouseUp)
-        if (rafRef.current) {
-          cancelAnimationFrame(rafRef.current)
-        }
       }
     }
-  }, [isDragging, onMove, player.id, boardRef])
+  }, [isDragging, onMove, player.id, boardRef, disabled])
 
   const isTeam1 = player.team === "team1"
 
@@ -76,7 +48,7 @@ export default function DraggablePlayer({ player, onMove, boardRef }: Props) {
     <div
       ref={elementRef}
       onMouseDown={handleMouseDown}
-      className="absolute w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm cursor-pointer select-none"
+      className="absolute w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm select-none"
       style={{
         left: `${player.x}%`,
         top: `${player.y}%`,
@@ -87,6 +59,8 @@ export default function DraggablePlayer({ player, onMove, boardRef }: Props) {
         boxShadow: isDragging ? "0 0 20px rgba(251, 191, 36, 0.6)" : "none",
         transition: isDragging ? "none" : "all 0.2s",
         scale: isDragging ? "1.1" : "1",
+        cursor: disabled ? "not-allowed" : "pointer",
+        pointerEvents: "auto",
       }}
     >
       {player.number}
