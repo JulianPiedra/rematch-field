@@ -3,6 +3,6 @@
 4:I[97367,["/rematch-field/_next/static/chunks/42879de7b8087bc9.js"],"MetadataBoundary"]
 5:"$Sreact.suspense"
 7:I[27201,["/rematch-field/_next/static/chunks/42879de7b8087bc9.js"],"IconMark"]
-0:{"buildId":"G2ssM-DZ_jUrlDJL1MyD5","rsc":["$","$1","h",{"children":[null,["$","$L2",null,{"children":"$@3"}],["$","div",null,{"hidden":true,"children":["$","$L4",null,{"children":["$","$5",null,{"name":"Next.Metadata","children":"$@6"}]}]}],["$","meta",null,{"name":"next-size-adjust","content":""}]]}],"loading":null,"isPartial":false}
+0:{"buildId":"UBZdjaVdIUfvktjpazaHH","rsc":["$","$1","h",{"children":[null,["$","$L2",null,{"children":"$@3"}],["$","div",null,{"hidden":true,"children":["$","$L4",null,{"children":["$","$5",null,{"name":"Next.Metadata","children":"$@6"}]}]}],["$","meta",null,{"name":"next-size-adjust","content":""}]]}],"loading":null,"isPartial":false}
 3:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]
 6:[["$","title","0",{"children":"Rematch Tactical Board"}],["$","meta","1",{"name":"description","content":"A draggable tactical board for Rematch."}],["$","meta","2",{"name":"generator","content":"Next.js"}],["$","link","3",{"rel":"icon","href":"/rematch-field/icon.png?icon.6a5a7646.png","sizes":"192x192","type":"image/png"}],["$","link","4",{"rel":"apple-touch-icon","href":"/rematch-field/apple-icon.png?apple-icon.6a5a7646.png","sizes":"192x192","type":"image/png"}],["$","$L7","5",{}]]
