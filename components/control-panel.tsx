@@ -1,9 +1,6 @@
 import { Button } from "@/components/ui/button"
-import { GameMode } from "./types"
 
 interface ControlPanelProps {
-  gameMode: GameMode
-  onChangeGameMode: (mode: GameMode) => void
   onReset: () => void
   isRecording: boolean
   isPlaying: boolean
@@ -18,8 +15,6 @@ interface ControlPanelProps {
 }
 
 export function ControlPanel({
-  gameMode,
-  onChangeGameMode,
   onReset,
   isRecording,
   isPlaying,
@@ -35,24 +30,8 @@ export function ControlPanel({
   return (
     <div className="space-y-3">
       <div className="flex gap-3 flex-wrap items-center">
-        <Button
-          onClick={() => onChangeGameMode("3v3")}
-          className={`${gameMode === "3v3" ? "bg-gray-600 hover:bg-gray-700" : "bg-green-600 hover:bg-green-700"} text-white`}
-        >
-          3v3
-        </Button>
-        <Button
-          onClick={() => onChangeGameMode("4v4")}
-          className={`${gameMode === "4v4" ? "bg-gray-600 hover:bg-gray-700" : "bg-green-600 hover:bg-green-700"} text-white`}
-        >
-          4v4
-        </Button>
-        <Button
-          onClick={() => onChangeGameMode("5v5")}
-          className={`${gameMode === "5v5" ? "bg-gray-600 hover:bg-gray-700" : "bg-green-600 hover:bg-green-700"} text-white`}
-        >
-          5v5
-        </Button>
+        
+        
         <Button onClick={onReset} variant="outline" className="border-gray-600 text-black-500 hover:bg-gray-700">
           Reset
         </Button>

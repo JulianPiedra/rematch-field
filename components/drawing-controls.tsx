@@ -1,12 +1,16 @@
 import { Button } from "@/components/ui/button"
+import { DrawingShapeType } from "./types"
 
 interface DrawingControlsProps {
   drawMode: boolean
   onToggleDrawMode: () => void
   isArrowMode: boolean
   onToggleArrowMode: () => void
+  drawingShape: DrawingShapeType
+  onChangeShape: (shape: DrawingShapeType) => void
   drawingColor: string
   onChangeColor: (color: string) => void
+  
   drawingWidth: number
   onChangeWidth: (width: number) => void
   onUndo: () => void
@@ -20,6 +24,8 @@ export function DrawingControls({
   onToggleDrawMode,
   isArrowMode,
   onToggleArrowMode,
+  drawingShape,
+  onChangeShape,
   drawingColor,
   onChangeColor,
   drawingWidth,
@@ -28,17 +34,35 @@ export function DrawingControls({
   onClear,
 }: DrawingControlsProps) {
   return (
-    <div className="flex gap-3 flex-wrap items-center bg-gray-800 p-3 rounded-lg">
+    <div className="flex gap-3 flex-wrap items-center">
       <Button
         onClick={onToggleDrawMode}
         className={drawMode ? "bg-purple-600 hover:bg-purple-700" : "bg-gray-700 hover:bg-gray-600"}
       >
-        {drawMode ? "✏️ Drawing ON" : "✏️ Drawing OFF"}
+        {drawMode ? "✏️ Drawing" : "✏️ Drawing"}
       </Button>
 
       {drawMode && (
         <>
-          <Button onClick={onToggleArrowMode} variant={isArrowMode ? "default" : "outline"} className="border-gray-600">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-400">Line:</span>
+            <Button onClick={() => onChangeShape("freehand")} variant={drawingShape === "freehand" ? "default" : "outline"} size="sm">
+              Free
+            </Button>
+            <Button onClick={() => onChangeShape("straight")} variant={drawingShape === "straight" ? "default" : "outline"} size="sm">
+              Straight
+            </Button>
+            <Button onClick={() => onChangeShape("circle")} variant={drawingShape === "circle" ? "default" : "outline"} size="sm">
+              Circle
+            </Button>
+          </div>
+
+          <Button
+            onClick={onToggleArrowMode}
+            variant={isArrowMode ? "default" : "outline"}
+            className="border-gray-600"
+            disabled={drawingShape === "circle"}
+          >
             {isArrowMode ? "➡️ Arrow" : "~ Line"}
           </Button>
 

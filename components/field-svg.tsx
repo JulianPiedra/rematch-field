@@ -28,31 +28,32 @@ export function FieldSVG() {
 
 
           <line x1="50%" y1="0" x2="50%" y2="100%" stroke="rgba(255,255,255,0.4)" strokeWidth="0.3%" />
-          <line x1="0%" y1="50%" x2="100%" y2="50%" stroke="rgba(255,255,255,0.4)" strokeWidth="0.3%" />
+          {/* Reference line-- */}
+          {/* <line x1="0%" y1="50%" x2="100%" y2="50%" stroke="rgba(255,255,255,0.4)" strokeWidth="0.3%" /> */}
 
-          <circle cx="50%" cy="50%" r="13.5%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" />
+          <circle cx="50%" cy="50%" r="9%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" />
           <circle cx="50%" cy="51%" r="0.8%" fill="rgba(255,255,255,0.6)" />
 
-          <rect x="-2.5%" y="15%" width="20%" height="70%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" />
+          <rect x="-3.8%" y="15%" width="20%" height="70%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" />
           <rect x="-1%" y="34%" width="7.5%" height="32%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" />
 
           <svg width="100%" height="100%">
             <clipPath id="cut">
-              <rect x="19%" y="0" width="50%" height="100%" />
+              <rect x="16.3%" y="0" width="50%" height="100%" />
             </clipPath>
-            <circle cx="15.7%" cy="50%" r="8%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" clipPath="url(#cut)" />
+            <circle cx="12%" cy="50%" r="8%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" clipPath="url(#cut)" />
           </svg>
 
           <circle cx="11.5" cy="25" r="0.5%" fill="rgba(255,255,255,0.6)" />
 
-          <rect x="82.5%" y="15%" width="20%" height="70%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" />
+          <rect x="83.8%" y="15%" width="20%" height="70%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" />
           <rect x="93.5%" y="34%" width="8%" height="32%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" />
 
           <svg width="100%" height="100%">
             <clipPath id="rightArc">
-              <rect x="61%" y="0" width="20%" height="100%" />
+              <rect x="63.8%" y="0" width="20%" height="100%" />
             </clipPath>
-            <circle cx="84.3%" cy="50%" r="8%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" clipPath="url(#rightArc)" />
+            <circle cx="88%" cy="50%" r="8%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" clipPath="url(#rightArc)" />
           </svg>
 
           <circle cx="88.5" cy="25" r="0.5%" fill="rgba(255,255,255,0.6)" />

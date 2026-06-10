@@ -3,7 +3,7 @@ import { DraggableBall } from "./draggable-ball"
 import { DraggablePlayer } from "./draggable-player"
 import { DrawingCanvas } from "./drawing-canvas"
 import { FieldSVG } from "./field-svg"
-import { Ball, DrawingLine, DrawingPoint, Player } from "./types"
+import { Ball, DrawingLine, DrawingPoint, DrawingShapeType, Player } from "./types"
 
 interface TacticalFieldProps {
   boardRef: any
@@ -14,6 +14,7 @@ interface TacticalFieldProps {
   drawingColor: string
   drawingWidth: number
   isArrowMode: boolean
+  drawingShape: DrawingShapeType
   drawMode: boolean
   onPlayerMove: (id: string, x: number, y: number) => void
   onBallMove: (x: number, y: number) => void
@@ -31,6 +32,7 @@ export function TacticalField({
   drawingColor,
   drawingWidth,
   isArrowMode,
+  drawingShape,
   drawMode,
   onPlayerMove,
   onBallMove,
@@ -46,7 +48,7 @@ export function TacticalField({
     >
       <FieldSVG />
 
-      {players.map((player) => (
+      {players.filter((player) => player.visible !== false).map((player) => (
         <DraggablePlayer key={player.id} player={player} onMove={onPlayerMove} boardRef={boardRef} disabled={drawMode} />
       ))}
 
@@ -58,6 +60,7 @@ export function TacticalField({
         drawingColor={drawingColor}
         drawingWidth={drawingWidth}
         isArrowMode={isArrowMode}
+        drawingShape={drawingShape}
         onMouseDown={onStartDrawing}
         onMouseMove={onContinueDrawing}
         onMouseUp={onEndDrawing}

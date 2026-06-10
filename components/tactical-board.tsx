@@ -2,10 +2,12 @@
 
 import type React from "react"
 import { useEffect, useRef, useState } from "react"
+import swal from "sweetalert"
 import { ControlPanel } from "./control-panel"
 import { DrawingControls } from "./drawing-controls"
 import { InfoBar } from "./info-bar"
 import { PlaybackControls } from "./playback-controls"
+import { PlayerControls } from "./player-controls"
 import { SavedPlays } from "./saved-plays"
 import { TacticalField } from "./tactical-field"
 import { StorageService } from "./storage"
@@ -13,19 +15,37 @@ import {
   Ball,
   DrawingLine,
   DrawingPoint,
-  GameMode,
+  DrawingShapeType,
   PlayFrame,
   Player,
   SavedPlay,
-  initialPositions,
-  initialTeam1,
-  initialTeam2,
+  createInitialPlayers,
 } from "./types"
 
+function applyPlayerPreferences(players: Player[], preferences: ReturnType<typeof StorageService.loadPlayerPreferences>): Player[] {
+  if (preferences.length === 0) {
+    return players
+  }
+
+  const preferencesById = new Map(preferences.map((preference) => [preference.id, preference]))
+
+  return players.map((player) => {
+    const preference = preferencesById.get(player.id)
+    if (!preference) {
+      return player
+    }
+
+    return {
+      ...player,
+      name: preference.name,
+      visible: preference.visible,
+    }
+  })
+}
+
 export default function TacticalBoard() {
-  const [gameMode, setGameMode] = useState<GameMode>("5v5")
   const [ball, setBall] = useState<Ball>({ x: 50, y: 50 })
-  const [players, setPlayers] = useState<Player[]>([...initialTeam1, ...initialTeam2])
+  const [players, setPlayers] = useState<Player[]>(() => createInitialPlayers())
   const boardRef = useRef<HTMLDivElement>(null)
 
   const [drawMode, setDrawMode] = useState(false)
@@ -35,10 +55,13 @@ export default function TacticalBoard() {
   const [drawingColor, setDrawingColor] = useState("#FFD700")
   const [drawingWidth, setDrawingWidth] = useState(3)
   const [isArrowMode, setIsArrowMode] = useState(true)
+  const [drawingShape, setDrawingShape] = useState<DrawingShapeType>("freehand")
+  const [playerControlsOpen, setPlayerControlsOpen] = useState(false)
 
   const [isRecording, setIsRecording] = useState(false)
   const [recordedFrames, setRecordedFrames] = useState<PlayFrame[]>([])
   const [savedPlays, setSavedPlays] = useState<SavedPlay[]>([])
+  const [isDragOver, setIsDragOver] = useState(false)
 
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentFrame, setCurrentFrame] = useState(0)
@@ -48,6 +71,9 @@ export default function TacticalBoard() {
   useEffect(() => {
     const plays = StorageService.loadPlays()
     setSavedPlays(plays)
+
+    const playerPreferences = StorageService.loadPlayerPreferences()
+    setPlayers((currentPlayers) => applyPlayerPreferences(currentPlayers, playerPreferences))
   }, [])
 
   useEffect(() => {
@@ -55,14 +81,76 @@ export default function TacticalBoard() {
   }, [savedPlays])
 
   useEffect(() => {
-    const current = initialPositions[gameMode]
-    const newPlayers = [
-      ...current.team1.map((p) => ({ ...p, team: "team1" as const })),
-      ...current.team2.map((p) => ({ ...p, team: "team2" as const })),
-    ]
-    setPlayers(newPlayers)
-    setBall({ x: 50, y: 50 })
-  }, [gameMode])
+    const preferences = players.map((player) => ({
+      id: player.id,
+      name: player.name,
+      visible: player.visible,
+    }))
+
+    StorageService.savePlayerPreferences(preferences)
+  }, [players])
+
+  const onDragAndDrop = (play: string | SavedPlay) => {
+    try {
+      const parsed = typeof play === "string" ? JSON.parse(play) : play
+      if (!parsed || typeof parsed !== "object" || !("name" in parsed) || !("frames" in parsed)) {
+        swal({ title: "Invalid play JSON", text: "Missing required fields.", icon: "error" })
+        return
+      }
+
+      const playWithId: SavedPlay = {
+        id: typeof parsed.id === "string" && parsed.id ? parsed.id : Date.now().toString(),
+        name: typeof parsed.name === "string" ? parsed.name : "Untitled play",
+        frames: Array.isArray(parsed.frames) ? parsed.frames : [],
+      }
+
+      if (playWithId.frames.length === 0) {
+        swal({ title: "Invalid play JSON", text: "A saved play needs at least one snapshot.", icon: "error" })
+        return
+      }
+
+      setSavedPlays((prev) => [...prev, playWithId])
+      swal({ title: "Imported play", text: playWithId.name, icon: "success" })
+    } catch (err) {
+      console.error(err)
+      swal({ title: "Failed to parse dropped play JSON.", icon: "error" })
+    }
+  }
+
+  const handleDragOver: React.DragEventHandler<HTMLDivElement> = (e) => {
+    e.preventDefault()
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave: React.DragEventHandler<HTMLDivElement> = () => {
+    setIsDragOver(false)
+  }
+
+  const handleDrop: React.DragEventHandler<HTMLDivElement> = async (e) => {
+    e.preventDefault()
+    setIsDragOver(false)
+
+    // Prefer files if present
+    const files = e.dataTransfer?.files
+    if (files && files.length > 0) {
+      const file = files[0]
+      try {
+        const text = await file.text()
+        onDragAndDrop(text)
+        return
+      } catch (err) {
+        console.error(err)
+        swal({ title: "Unable to read dropped file.", icon: "error" })
+        return
+      }
+    }
+
+    // Fallback to dataTransfer payloads
+    const jsonData = e.dataTransfer.getData("application/json") || e.dataTransfer.getData("text/plain")
+    if (jsonData) {
+      onDragAndDrop(jsonData)
+    }
+  }
 
   const handlePlayerMove = (playerId: string, x: number, y: number) => {
     setPlayers((prev) =>
@@ -76,13 +164,17 @@ export default function TacticalBoard() {
     setBall({ x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) })
   }
 
+  const handlePlayerNameChange = (playerId: string, name: string) => {
+    setPlayers((prev) => prev.map((p) => (p.id === playerId ? { ...p, name } : p)))
+  }
+
+  const handlePlayerVisibilityChange = (playerId: string, visible: boolean) => {
+    setPlayers((prev) => prev.map((p) => (p.id === playerId ? { ...p, visible } : p)))
+  }
+
   const resetPositions = () => {
-    const current = initialPositions[gameMode]
-    const newPlayers = [
-      ...current.team1.map((p) => ({ ...p, team: "team1" as const })),
-      ...current.team2.map((p) => ({ ...p, team: "team2" as const })),
-    ]
-    setPlayers(newPlayers)
+    const playerPreferences = StorageService.loadPlayerPreferences()
+    setPlayers(applyPlayerPreferences(createInitialPlayers(), playerPreferences))
     setBall({ x: 50, y: 50 })
     setDrawings([])
   }
@@ -105,7 +197,14 @@ export default function TacticalBoard() {
     const x = ((e.clientX - rect.left) / rect.width) * 100
     const y = ((e.clientY - rect.top) / rect.height) * 100
 
-    setCurrentLine((prev) => [...prev, { x, y }])
+    setCurrentLine((prev) => {
+      if (drawingShape === "freehand") {
+        return [...prev, { x, y }]
+      }
+
+      const start = prev[0]
+      return start ? [start, { x, y }] : [{ x, y }]
+    })
   }
 
   const endDrawing = () => {
@@ -117,10 +216,11 @@ export default function TacticalBoard() {
 
     const newDrawing: DrawingLine = {
       id: Date.now().toString(),
-      points: currentLine,
+      points: drawingShape === "freehand" ? currentLine : currentLine.slice(0, 2),
       color: drawingColor,
       width: drawingWidth,
-      isArrow: isArrowMode,
+      isArrow: drawingShape !== "circle" && isArrowMode,
+      shape: drawingShape,
     }
 
     setDrawings((prev) => [...prev, newDrawing])
@@ -163,33 +263,38 @@ export default function TacticalBoard() {
     }
   }
 
-  const savePlay = () => {
+  const savePlay = async () => {
     if (recordedFrames.length < 2) {
-      alert("You need at least 2 snapshots to save a play!")
+      await swal({
+        title: "Not enough snapshots",
+        text: "You need at least 2 snapshots to save a play!",
+        icon: "warning",
+      })
       return
     }
 
-    const playName = prompt("Enter play name:")
+    const playName = await swal({
+      title: "Enter play name:",
+      content: { element: "input", attributes: { placeholder: "Play name" } }
+    } as any)
     if (!playName) return
 
     const newPlay: SavedPlay = {
       id: Date.now().toString(),
       name: playName,
       frames: recordedFrames,
-      gameMode,
     }
 
     setSavedPlays((prev) => [...prev, newPlay])
     setRecordedFrames([])
     setIsRecording(false)
-    alert("Play saved successfully!")
+    await swal({ title: "Play saved successfully!", icon: "success" })
   }
 
   const loadPlay = (play: SavedPlay) => {
     setSelectedPlay(play)
     setCurrentFrame(0)
     setIsPlaying(false)
-    setGameMode(play.gameMode)
 
     if (play.frames.length > 0) {
       setPlayers(play.frames[0].players)
@@ -216,12 +321,20 @@ export default function TacticalBoard() {
     }
   }
 
-  const deletePlay = (playId: string) => {
-    if (confirm("Are you sure you want to delete this play?")) {
+  const deletePlay = async (playId: string) => {
+    const willDelete = await swal({
+      title: "Delete this play?",
+      text: "This action cannot be undone.",
+      icon: "warning",
+      buttons: ["Cancel", "Delete"],
+      dangerMode: true,
+    })
+    if (willDelete) {
       setSavedPlays((prev) => prev.filter((p) => p.id !== playId))
       if (selectedPlay?.id === playId) {
         setSelectedPlay(null)
       }
+      await swal({ title: "Play deleted", icon: "success" })
     }
   }
 
@@ -250,10 +363,13 @@ export default function TacticalBoard() {
   }, [isPlaying, selectedPlay, playbackSpeed])
 
   return (
-    <div className="space-y-4 p-6 bg-gray-900 min-h-screen">
+    <div
+      className="space-y-4 p-6 bg-gray-900 min-h-screen"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <ControlPanel
-        gameMode=        {gameMode}
-        onChangeGameMode={setGameMode}
         onReset={resetPositions}
         isRecording={isRecording}
         isPlaying={isPlaying}
@@ -267,18 +383,30 @@ export default function TacticalBoard() {
         snapshotsCount={recordedFrames.length}
       />
 
-      <DrawingControls
-        drawMode={drawMode}
-        onToggleDrawMode={() => setDrawMode((prev) => !prev)}
-        isArrowMode={isArrowMode}
-        onToggleArrowMode={() => setIsArrowMode((prev) => !prev)}
-        drawingColor={drawingColor}
-        onChangeColor={setDrawingColor}
-        drawingWidth={drawingWidth}
-        onChangeWidth={setDrawingWidth}
-        onUndo={undoLastDrawing}
-        onClear={clearDrawings}
-      />
+      <div className="flex gap-3 flex-wrap items-center bg-gray-800 p-3 rounded-lg">
+        <DrawingControls
+          drawMode={drawMode}
+          onToggleDrawMode={() => setDrawMode((prev) => !prev)}
+          isArrowMode={isArrowMode}
+          onToggleArrowMode={() => setIsArrowMode((prev) => !prev)}
+          drawingShape={drawingShape}
+          onChangeShape={setDrawingShape}
+          drawingColor={drawingColor}
+          onChangeColor={setDrawingColor}
+          drawingWidth={drawingWidth}
+          onChangeWidth={setDrawingWidth}
+          onUndo={undoLastDrawing}
+          onClear={clearDrawings}
+        />
+
+        <PlayerControls
+          players={players}
+          controlsOpen={playerControlsOpen}
+          onToggleControls={() => setPlayerControlsOpen((prev) => !prev)}
+          onPlayerNameChange={handlePlayerNameChange}
+          onPlayerVisibilityChange={handlePlayerVisibilityChange}
+        />
+      </div>
 
       <TacticalField
         boardRef={boardRef}
@@ -289,6 +417,7 @@ export default function TacticalBoard() {
         drawingColor={drawingColor}
         drawingWidth={drawingWidth}
         isArrowMode={isArrowMode}
+        drawingShape={drawingShape}
         drawMode={drawMode}
         onPlayerMove={handlePlayerMove}
         onBallMove={handleBallMove}
@@ -311,6 +440,19 @@ export default function TacticalBoard() {
           onStop={stopPlayback}
           onChangeSpeed={setPlaybackSpeed}
         />
+      )}
+
+      {/* Drag-and-drop import overlay */}
+      {isDragOver && (
+        <div className="fixed inset-0 pointer-events-none">
+          <div className="absolute inset-0 bg-blue-900/30 backdrop-blur-sm" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="rounded-xl border-2 border-blue-400 bg-blue-950/40 px-6 py-4 text-center text-blue-200 shadow-lg">
+              <p className="font-semibold">Drop a saved play JSON to import</p>
+              <p className="text-xs opacity-80">File or text containing a SavedPlay</p>
+            </div>
+          </div>
+        </div>
       )}
 
       <SavedPlays savedPlays={savedPlays} onLoad={loadPlay} onDelete={deletePlay} />

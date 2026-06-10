@@ -43,27 +43,37 @@ export function DraggablePlayer({ player, onMove, boardRef, disabled }: Draggabl
   }, [isDragging, onMove, player.id, boardRef, disabled])
 
   const isTeam1 = player.team === "team1"
+  const displayLabel = player.name?.trim() || player.number.toString()
 
   return (
     <div
       ref={elementRef}
       onMouseDown={handleMouseDown}
-      className="absolute w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm select-none"
+      className="absolute h-12 w-12 select-none"
+      title={displayLabel}
       style={{
         left: `${player.x}%`,
         top: `${player.y}%`,
         transform: "translate(-50%, -50%)",
-        backgroundColor: isTeam1 ? "#fff" : "#000",
-        color: isTeam1 ? "#000" : "#fff",
-        border: isDragging ? "3px solid #fbbf24" : "2px solid rgba(255,255,255,0.5)",
-        boxShadow: isDragging ? "0 0 20px rgba(251, 191, 36, 0.6)" : "none",
-        transition: isDragging ? "none" : "all 0.2s",
-        scale: isDragging ? "1.1" : "1",
         cursor: disabled ? "not-allowed" : "pointer",
         pointerEvents: "auto",
       }}
     >
-      {player.number}
+      <div className="pointer-events-none absolute bottom-full left-1/2 mb-2 w-max -translate-x-1/2 rounded bg-gray-950/85 px-2 py-1 text-center text-xs font-semibold leading-none text-white shadow-md">
+        <span className="block text-ellipsis whitespace-nowrap">{displayLabel}</span>
+      </div>
+
+      <div
+        className="flex h-12 w-12 items-center justify-center rounded-full"
+        style={{
+          backgroundColor: isTeam1 ? "#0026ff" : "#000",
+          color: isTeam1 ? "#000" : "#fff",
+          border: isDragging ? "3px solid #fbbf24" : "",
+          boxShadow: isDragging ? "0 0 20px rgba(251, 191, 36, 0.6)" : "none",
+          transition: isDragging ? "none" : "all 0.2s",
+          scale: isDragging ? "1.1" : "1",
+        }}
+      />
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, type MouseEvent as ReactMouseEvent } from "react"
-import { DrawingLine, DrawingPoint } from "./types"
+import { DrawingLine, DrawingPoint, DrawingShapeType } from "./types"
 
 interface DrawingCanvasProps {
   drawings: DrawingLine[]
@@ -7,6 +7,7 @@ interface DrawingCanvasProps {
   drawingColor: string
   drawingWidth: number
   isArrowMode: boolean
+  drawingShape: DrawingShapeType
   onMouseDown: (e: ReactMouseEvent<HTMLCanvasElement>) => void
   onMouseMove: (e: ReactMouseEvent<HTMLCanvasElement>) => void
   onMouseUp: () => void
@@ -19,6 +20,7 @@ export function DrawingCanvas({
   drawingColor,
   drawingWidth,
   isArrowMode,
+  drawingShape,
   onMouseDown,
   onMouseMove,
   onMouseUp,
@@ -36,15 +38,46 @@ export function DrawingCanvas({
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
     drawings.forEach((line) => {
-      drawLine(ctx, line.points, line.color, line.width, line.isArrow, canvas.width, canvas.height)
+      renderShape(ctx, line, canvas.width, canvas.height)
     })
 
     if (currentLine.length > 0) {
-      drawLine(ctx, currentLine, drawingColor, drawingWidth, isArrowMode, canvas.width, canvas.height)
+      const preview: DrawingLine = {
+        id: "preview",
+        points: currentLine,
+        color: drawingColor,
+        width: drawingWidth,
+        isArrow: drawingShape !== "circle" && isArrowMode,
+        shape: drawingShape,
+      }
+      renderShape(ctx, preview, canvas.width, canvas.height)
     }
-  }, [drawings, currentLine, drawingColor, drawingWidth, isArrowMode])
+  }, [drawings, currentLine, drawingColor, drawingWidth, isArrowMode, drawingShape])
 
-  const drawLine = (
+  const renderShape = (
+    ctx: CanvasRenderingContext2D,
+    line: DrawingLine,
+    canvasWidth: number,
+    canvasHeight: number,
+  ) => {
+    const shape: DrawingShapeType = line.shape ?? "freehand"
+    const color = line.color
+    const width = line.width
+
+    if (shape === "circle") {
+      drawCircle(ctx, line.points, color, width, canvasWidth, canvasHeight)
+      return
+    }
+
+    if (shape === "straight") {
+      drawStraight(ctx, line.points, color, width, line.isArrow, canvasWidth, canvasHeight)
+      return
+    }
+
+    drawFreehand(ctx, line.points, color, width, line.isArrow, canvasWidth, canvasHeight)
+  }
+
+  const drawFreehand = (
     ctx: CanvasRenderingContext2D,
     points: DrawingPoint[],
     color: string,
@@ -70,26 +103,95 @@ export function DrawingCanvas({
     ctx.stroke()
 
     if (isArrow && points.length >= 2) {
-      const lastPoint = points[points.length - 1]
-      const secondLastPoint = points[points.length - 2]
-
-      const x1 = (secondLastPoint.x / 100) * canvasWidth
-      const y1 = (secondLastPoint.y / 100) * canvasHeight
-      const x2 = (lastPoint.x / 100) * canvasWidth
-      const y2 = (lastPoint.y / 100) * canvasHeight
-
-      const angle = Math.atan2(y2 - y1, x2 - x1)
-      const arrowLength = 15
-      const arrowAngle = Math.PI / 6
-
-      ctx.fillStyle = color
-      ctx.beginPath()
-      ctx.moveTo(x2, y2)
-      ctx.lineTo(x2 - arrowLength * Math.cos(angle - arrowAngle), y2 - arrowLength * Math.sin(angle - arrowAngle))
-      ctx.lineTo(x2 - arrowLength * Math.cos(angle + arrowAngle), y2 - arrowLength * Math.sin(angle + arrowAngle))
-      ctx.closePath()
-      ctx.fill()
+      drawArrowHead(ctx, points[points.length - 2], points[points.length - 1], color, canvasWidth, canvasHeight)
     }
+  }
+
+  const drawStraight = (
+    ctx: CanvasRenderingContext2D,
+    points: DrawingPoint[],
+    color: string,
+    width: number,
+    isArrow: boolean,
+    canvasWidth: number,
+    canvasHeight: number,
+  ) => {
+    if (points.length < 2) return
+
+    const start = points[0]
+    const end = points[points.length - 1]
+
+    const x1 = (start.x / 100) * canvasWidth
+    const y1 = (start.y / 100) * canvasHeight
+    const x2 = (end.x / 100) * canvasWidth
+    const y2 = (end.y / 100) * canvasHeight
+
+    ctx.strokeStyle = color
+    ctx.lineWidth = width
+    ctx.lineCap = "round"
+    ctx.lineJoin = "round"
+
+    ctx.beginPath()
+    ctx.moveTo(x1, y1)
+    ctx.lineTo(x2, y2)
+    ctx.stroke()
+
+    if (isArrow) {
+      drawArrowHead(ctx, start, end, color, canvasWidth, canvasHeight)
+    }
+  }
+
+  const drawCircle = (
+    ctx: CanvasRenderingContext2D,
+    points: DrawingPoint[],
+    color: string,
+    width: number,
+    canvasWidth: number,
+    canvasHeight: number,
+  ) => {
+    if (points.length < 2) return
+
+    const center = points[0]
+    const edge = points[points.length - 1]
+
+    const cx = (center.x / 100) * canvasWidth
+    const cy = (center.y / 100) * canvasHeight
+    const ex = (edge.x / 100) * canvasWidth
+    const ey = (edge.y / 100) * canvasHeight
+    const radius = Math.sqrt((ex - cx) ** 2 + (ey - cy) ** 2)
+
+    ctx.strokeStyle = color
+    ctx.lineWidth = width
+
+    ctx.beginPath()
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2)
+    ctx.stroke()
+  }
+
+  const drawArrowHead = (
+    ctx: CanvasRenderingContext2D,
+    from: DrawingPoint,
+    to: DrawingPoint,
+    color: string,
+    canvasWidth: number,
+    canvasHeight: number,
+  ) => {
+    const x1 = (from.x / 100) * canvasWidth
+    const y1 = (from.y / 100) * canvasHeight
+    const x2 = (to.x / 100) * canvasWidth
+    const y2 = (to.y / 100) * canvasHeight
+
+    const angle = Math.atan2(y2 - y1, x2 - x1)
+    const arrowLength = 15
+    const arrowAngle = Math.PI / 6
+
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.moveTo(x2, y2)
+    ctx.lineTo(x2 - arrowLength * Math.cos(angle - arrowAngle), y2 - arrowLength * Math.sin(angle - arrowAngle))
+    ctx.lineTo(x2 - arrowLength * Math.cos(angle + arrowAngle), y2 - arrowLength * Math.sin(angle + arrowAngle))
+    ctx.closePath()
+    ctx.fill()
   }
 
   return (
