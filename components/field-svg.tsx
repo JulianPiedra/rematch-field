@@ -7,9 +7,9 @@ export function FieldSVG() {
     >
       <defs>
         <pattern id="field-lines" x="0" y="0" width="100%" height="100%" patternUnits="objectBoundingBox">
-          {Array.from({ length: 33 }).map((_, i) => {
-            const x = (i / 33) * 100
-            const width = (1 / 33) * 100
+          {Array.from({ length: 37 }).map((_, i) => {
+            const x = (i / 37) * 100
+            const width = (1 / 37) * 100
             const isEven = i % 2 === 0
             return (
               <rect
@@ -23,12 +23,18 @@ export function FieldSVG() {
             )
           })}
 
-          <line x1="50%" y1="0" x2="50%" y2="100%" stroke="rgba(255,255,255,0.4)" strokeWidth="0.3%" />
-          <circle cx="50%" cy="50%" r="13.5%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" />
-          <circle cx="50%" cy="50%" r="0.8%" fill="rgba(255,255,255,0.6)" />
 
-          <rect x="-1" y="15%" width="20%" height="70%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" />
-          <rect x="-1%" y="30%" width="8%" height="40%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" />
+
+
+
+          <line x1="50%" y1="0" x2="50%" y2="100%" stroke="rgba(255,255,255,0.4)" strokeWidth="0.3%" />
+          <line x1="0%" y1="50%" x2="100%" y2="50%" stroke="rgba(255,255,255,0.4)" strokeWidth="0.3%" />
+
+          <circle cx="50%" cy="50%" r="13.5%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" />
+          <circle cx="50%" cy="51%" r="0.8%" fill="rgba(255,255,255,0.6)" />
+
+          <rect x="-2.5%" y="15%" width="20%" height="70%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" />
+          <rect x="-1%" y="34%" width="7.5%" height="32%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" />
 
           <svg width="100%" height="100%">
             <clipPath id="cut">
@@ -37,10 +43,10 @@ export function FieldSVG() {
             <circle cx="15.7%" cy="50%" r="8%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" clipPath="url(#cut)" />
           </svg>
 
-          <circle cx="12.2" cy="25" r="0.5%" fill="rgba(255,255,255,0.6)" />
+          <circle cx="11.5" cy="25" r="0.5%" fill="rgba(255,255,255,0.6)" />
 
-          <rect x="81%" y="15%" width="20%" height="70%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" />
-          <rect x="93%" y="30%" width="8%" height="40%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" />
+          <rect x="82.5%" y="15%" width="20%" height="70%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" />
+          <rect x="93.5%" y="34%" width="8%" height="32%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" />
 
           <svg width="100%" height="100%">
             <clipPath id="rightArc">
@@ -49,7 +55,7 @@ export function FieldSVG() {
             <circle cx="84.3%" cy="50%" r="8%" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.2%" clipPath="url(#rightArc)" />
           </svg>
 
-          <circle cx="87.8" cy="25" r="0.5%" fill="rgba(255,255,255,0.6)" />
+          <circle cx="88.5" cy="25" r="0.5%" fill="rgba(255,255,255,0.6)" />
         </pattern>
       </defs>
       <rect width="100%" height="100%" fill="url(#field-lines)" />
