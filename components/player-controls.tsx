@@ -56,7 +56,7 @@ export function PlayerControls({
             <div className="space-y-2">
               {team1Players.map((player) => (
                 <div key={player.id} className="flex items-center gap-2 text-xs">
-                  <span className="w-10 text-gray-300">#{player.number}</span>
+                  <span className="w-10 text-gray-300"># {player.number}</span>
                   <input
                     type="text"
                     value={player.name ?? player.number.toString()}

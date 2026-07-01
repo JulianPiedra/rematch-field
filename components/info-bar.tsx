@@ -14,7 +14,7 @@ export function InfoBar({ players, ball }: InfoBarProps) {
   return (
     <div className="grid grid-cols-3 gap-4 text-center text-sm text-gray-400">
       <div>
-        <p className="font-semibold text-white">White Team</p>
+        <p className="font-semibold text-white">Blue Team</p>
         <p>
           {team1Visible}/{team1Players.length} visible
         </p>
